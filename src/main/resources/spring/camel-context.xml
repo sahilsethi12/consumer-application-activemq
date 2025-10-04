@@ -45,6 +45,8 @@
     <!-- Bind AMQP component to Camel -->
     <bean id="amqps" class="org.apache.camel.component.amqp.AMQPComponent">
         <property name="connectionFactory" ref="jmsConnectionFactory"/>
+        <property name="acknowledgementModeName" value="CLIENT_ACKNOWLEDGE"/>
+
     </bean>
 
 </beans>

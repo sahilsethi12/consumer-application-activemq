@@ -32,7 +32,7 @@
 
 
 
-    <bean id="failureProcessor" class="com.example.FailureProcessor"/>
+    <bean id="failureProcessor" class="com.example.demo.FailureProcessor"/>
 
     <!-- Qpid JMS ConnectionFactory -->
     <bean id="jmsConnectionFactory"

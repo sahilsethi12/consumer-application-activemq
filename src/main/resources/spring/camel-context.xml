@@ -4,50 +4,20 @@
     <camelContext id="camel" xmlns="http://camel.apache.org/schema/spring">
 
 
-        <restConfiguration component="servlet" contextPath="/api"/>
-        <rest id="rest" path="/say">
-            <post consumes="application/json" id="get" produces="text" uri="/incoming_order">
-                <to uri="direct:hello"/>
-            </post>
 
-            <post consumes="application/json" id="get" produces="text" uri="/outgoing_order">
-                <to uri="direct:helloworld"/>
-            </post>
-        </rest>
-
-
-
-        <route id="_route1">
-            <from id="_from1" uri="direct:hello"/>
-            <log message="Hit Received {{incomingOrders}} with ${body}"/>
-            <transform id="_transform1">
-                <simple>${body}</simple>
-            </transform>
-
-            <to id="route-to-incoming-orders" uri="amqps:incomingOrders?exchangePattern=InOnly"/>
-            <log message="Hello {{incomingOrders}}"/>
-            <setHeader name="Content-Type">
-                <simple>application/json</simple>
-            </setHeader>
-            <setBody>
-                <simple>{"message":"Successfully  Received"}</simple>
-            </setBody>
+        <!-- 🧪 DLQ Test Route (Consumer that fails intentionally) -->
+        <route id="dlqTestConsumer">
+            <!-- Consume from a test queue -->
+            <from uri="amqps:incomingOrders"/>
+            <log message="Received message from amqps:incomingOrders ${body}"/>
+            <!-- Simulate failure -->
+            <process ref="failureProcessor"/>
         </route>
 
-        <route id="_route2">
-            <from id="_from1" uri="direct:helloworld"/>
-            <log message="Hit Received {{outgoingOrders}}  with ${body}"/>
-            <transform id="_transform2">
-                <simple>${body}</simple>
-            </transform>
-            <to id="route-to-incoming-orders1" uri="amqps:outgoingOrders?exchangePattern=InOnly"/>
-            <log message="Hello {{outgoingOrders}}"/>
-            <setHeader name="Content-Type">
-                <simple>application/json</simple>
-            </setHeader>
-            <setBody>
-                <simple>{"message":"Successfully  Received"}</simple>
-            </setBody>
+        <!-- ✅ Optional DLQ Reader (for verifying DLQ messages) -->
+        <route id="dlqConsumer">
+            <from uri="amqps:DLQ"/>
+            <log message="📥 Message moved to DLQ: ${body}"/>
         </route>
 
     </camelContext>
@@ -62,6 +32,7 @@
 
 
 
+    <bean id="failureProcessor" class="com.example.FailureProcessor"/>
 
     <!-- Qpid JMS ConnectionFactory -->
     <bean id="jmsConnectionFactory"

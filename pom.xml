@@ -6,10 +6,10 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.samplet</groupId>
-	<artifactId>camel3-xmldsl-sample-project</artifactId>
+	<artifactId>consumer-application-activemq</artifactId>
 	<packaging>jar</packaging>
 	<version>1.0.0-SNAPSHOT</version>
-	<name>camel3-xmldsl-sample-project</name>
+	<name>consumer-application-activemq</name>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

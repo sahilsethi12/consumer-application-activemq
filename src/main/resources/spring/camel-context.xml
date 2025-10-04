@@ -1,22 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="        http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd        http://camel.apache.org/schema/spring       https://camel.apache.org/schema/spring/camel-spring.xsd">
-    <camelContext id="camel" xmlns="http://camel.apache.org/schema/spring">
+    <camelContext id="camel" xmlns="http://camel.apache.org/schema/spring" errorHandlerRef="myErrorHandler">
+
+
+        <errorHandler id="myErrorHandler" type="DeadLetterChannel"
+                      deadLetterUri="amqps:customdlq?connectionFactory=#jmsConnectionFactory">
+            <redeliveryPolicy maximumRedeliveries="3" redeliveryDelay="5000"/>
+        </errorHandler>
 
 
 
-        <!-- 🧪 DLQ Test Route (Consumer that fails intentionally) -->
         <route id="dlqTestConsumer">
-            <!-- Consume from a test queue -->
-            <from uri="amqps:incomingOrders"/>
+            <from uri="amqps:incomingOrders?connectionFactory=#jmsConnectionFactory"/>
+            <convertBodyTo type="java.lang.String"/>
             <log message="Received message from amqps:incomingOrders ${body}"/>
-            <!-- Simulate failure -->
-            <process ref="failureProcessor"/>
+            <setHeader name="sanity_status">
+                <jsonpath>$.status</jsonpath>
+            </setHeader>
+
+            <choice>
+                <when>
+                    <simple>${header.status} == 'failed' || ${header.status} == 'FAILED'</simple>
+                    <log message="Ready to throw exception"/>
+                    <process ref="failureProcessor"/>
+                </when>
+                <otherwise>
+                    <setHeader name="Content-Type">
+                        <simple>application/json</simple>
+                    </setHeader>
+                    <setBody>
+                        <simple>{"message":"Successfully Received", "date":"${date:now:yyyy-MM-dd HH:mm:ss}"}</simple>
+                    </setBody>
+                </otherwise>
+            </choice>
+
         </route>
 
-        <!-- ✅ Optional DLQ Reader (for verifying DLQ messages) -->
-        <route id="dlqConsumer">
-            <from uri="amqps:DLQ"/>
+
+        <route id="dlqConsumer" autoStartup="false">
+                <from uri="amqps:customdlq?connectionFactory=#jmsConnectionFactory"/>
             <log message="📥 Message moved to DLQ: ${body}"/>
         </route>
 

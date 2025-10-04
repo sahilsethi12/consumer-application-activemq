@@ -1,53 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="        http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd        http://camel.apache.org/schema/spring       https://camel.apache.org/schema/spring/camel-spring.xsd">
-    <camelContext id="camel" xmlns="http://camel.apache.org/schema/spring">
+    <camelContext id="camel" xmlns="http://camel.apache.org/schema/spring" errorHandlerRef="myErrorHandler">
 
 
-        <restConfiguration component="servlet" contextPath="/api"/>
-        <rest id="rest" path="/say">
-            <post consumes="application/json" id="get" produces="text" uri="/incoming_order">
-                <to uri="direct:hello"/>
-            </post>
+        <errorHandler id="myErrorHandler" type="DeadLetterChannel"
+                      deadLetterUri="amqps:customdlq?connectionFactory=#jmsConnectionFactory">
+            <redeliveryPolicy maximumRedeliveries="3" redeliveryDelay="5000"/>
+        </errorHandler>
 
-            <post consumes="application/json" id="get" produces="text" uri="/outgoing_order">
-                <to uri="direct:helloworld"/>
-            </post>
-        </rest>
-
-
-
-        <route id="_route1">
-            <from id="_from1" uri="direct:hello"/>
-            <log message="Hit Received {{incomingOrders}} with ${body}"/>
-            <transform id="_transform1">
-                <simple>${body}</simple>
-            </transform>
-
-            <to id="route-to-incoming-orders" uri="amqps:incomingOrders?exchangePattern=InOnly"/>
-            <log message="Hello {{incomingOrders}}"/>
-            <setHeader name="Content-Type">
-                <simple>application/json</simple>
-            </setHeader>
-            <setBody>
-                <simple>{"message":"Successfully  Received"}</simple>
-            </setBody>
+        <!-- 🧪 DLQ Test Route (Consumer that fails intentionally) -->
+        <route id="dlqTestConsumer">
+            <!-- Consume from a test queue -->
+            <from uri="amqps:incomingOrders?connectionFactory=#jmsConnectionFactory"/>
+            <log message="Received message from amqps:incomingOrders ${body}"/>
+            <!-- Simulate failure -->
+            <process ref="failureProcessor"/>
         </route>
 
-        <route id="_route2">
-            <from id="_from1" uri="direct:helloworld"/>
-            <log message="Hit Received {{outgoingOrders}}  with ${body}"/>
-            <transform id="_transform2">
-                <simple>${body}</simple>
-            </transform>
-            <to id="route-to-incoming-orders1" uri="amqps:outgoingOrders?exchangePattern=InOnly"/>
-            <log message="Hello {{outgoingOrders}}"/>
-            <setHeader name="Content-Type">
-                <simple>application/json</simple>
-            </setHeader>
-            <setBody>
-                <simple>{"message":"Successfully  Received"}</simple>
-            </setBody>
+        <!-- ✅ Optional DLQ Reader (for verifying DLQ messages) -->
+        <route id="dlqConsumer">
+                <from uri="amqps:customdlq?connectionFactory=#jmsConnectionFactory"/>
+            <log message="📥 Message moved to DLQ: ${body}"/>
         </route>
 
     </camelContext>
@@ -62,6 +36,7 @@
 
 
 
+    <bean id="failureProcessor" class="com.example.demo.FailureProcessor"/>
 
     <!-- Qpid JMS ConnectionFactory -->
     <bean id="jmsConnectionFactory"
@@ -74,6 +49,8 @@
     <!-- Bind AMQP component to Camel -->
     <bean id="amqps" class="org.apache.camel.component.amqp.AMQPComponent">
         <property name="connectionFactory" ref="jmsConnectionFactory"/>
+        <property name="acknowledgementModeName" value="CLIENT_ACKNOWLEDGE"/>
+
     </bean>
 
 </beans>

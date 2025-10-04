@@ -1,19 +1,19 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: my-java-springboot
+  name: java-springboot-consumer
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: java-springboot-app
+      app: java-springboot-consumer
   template:
     metadata:
       labels:
-        app: java-springboot-app
+        app: java-springboot-consumer
     spec:
       containers:
-        - name: my-java-springboot
+        - name: java-springboot-consumer
           image: java-springboot-image:latest
           ports:
             - name: http
@@ -27,7 +27,7 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: my-java-springboot-svc
+  name: java-springboot-consumer-svc
 spec:
   ports:
     - name: http-8988
@@ -35,4 +35,4 @@ spec:
       protocol: TCP
       targetPort: 8988
   selector:
-    app: java-springboot-app
+    app: java-springboot-consumer

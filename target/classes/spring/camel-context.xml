@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="        http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd        http://camel.apache.org/schema/spring       https://camel.apache.org/schema/spring/camel-spring.xsd">
+    <camelContext id="camel" xmlns="http://camel.apache.org/schema/spring">
+
+
+        <restConfiguration component="servlet" contextPath="/api"/>
+        <rest id="rest" path="/say">
+            <post consumes="application/json" id="get" produces="text" uri="/incoming_order">
+                <to uri="direct:hello"/>
+            </post>
+
+            <post consumes="application/json" id="get" produces="text" uri="/outgoing_order">
+                <to uri="direct:helloworld"/>
+            </post>
+        </rest>
+
+
+
+        <route id="_route1">
+            <from id="_from1" uri="direct:hello"/>
+            <log message="Hit Received {{incomingOrders}} with ${body}"/>
+            <transform id="_transform1">
+                <simple>${body}</simple>
+            </transform>
+
+            <to id="route-to-incoming-orders" uri="amqps:incomingOrders?exchangePattern=InOnly"/>
+            <log message="Hello {{incomingOrders}}"/>
+            <setHeader name="Content-Type">
+                <simple>application/json</simple>
+            </setHeader>
+            <setBody>
+                <simple>{"message":"Successfully  Received"}</simple>
+            </setBody>
+        </route>
+
+        <route id="_route2">
+            <from id="_from1" uri="direct:helloworld"/>
+            <log message="Hit Received {{outgoingOrders}}  with ${body}"/>
+            <transform id="_transform2">
+                <simple>${body}</simple>
+            </transform>
+            <to id="route-to-incoming-orders1" uri="amqps:outgoingOrders?exchangePattern=InOnly"/>
+            <log message="Hello {{outgoingOrders}}"/>
+            <setHeader name="Content-Type">
+                <simple>application/json</simple>
+            </setHeader>
+            <setBody>
+                <simple>{"message":"Successfully  Received"}</simple>
+            </setBody>
+        </route>
+
+    </camelContext>
+    <bean
+            class="org.apache.camel.component.servlet.CamelHttpTransportServlet" id="camelHttpTransportServlet"/>
+    <bean
+            class="org.springframework.boot.web.servlet.ServletRegistrationBean" id="servlet">
+        <property name="name" value="CamelServlet"/>
+        <property name="servlet" ref="camelHttpTransportServlet"/>
+        <property name="urlMappings" value="/api/*"/>
+    </bean>
+
+
+
+
+    <!-- Qpid JMS ConnectionFactory -->
+    <bean id="jmsConnectionFactory"
+          class="org.apache.qpid.jms.JmsConnectionFactory">
+        <property name="remoteURI" value="${amqp.url}"/>
+        <property name="username" value="${amqp.username}"/>
+        <property name="password" value="${amqp.password}"/>
+    </bean>
+
+    <!-- Bind AMQP component to Camel -->
+    <bean id="amqps" class="org.apache.camel.component.amqp.AMQPComponent">
+        <property name="connectionFactory" ref="jmsConnectionFactory"/>
+    </bean>
+
+</beans>

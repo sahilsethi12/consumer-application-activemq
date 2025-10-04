@@ -16,12 +16,13 @@
             <convertBodyTo type="java.lang.String"/>
             <log message="Received message from amqps:incomingOrders ${body}"/>
             <setHeader name="sanity_status">
-                <jsonpath>$.status</jsonpath>
+                <jsonpath>$.sanity_status</jsonpath>
             </setHeader>
+            <log message="Header value is ${header.sanity_status}"/>
 
             <choice>
                 <when>
-                    <simple>${header.status} == 'failed' || ${header.status} == 'FAILED'</simple>
+                    <simple>${header.sanity_status} == 'failed' || ${header.sanity_status} == 'FAILED'</simple>
                     <log message="Ready to throw exception"/>
                     <process ref="failureProcessor"/>
                 </when>

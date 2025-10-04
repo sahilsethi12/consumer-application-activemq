@@ -25,6 +25,8 @@
                     <simple>${header.sanity_status} == 'failed' || ${header.sanity_status} == 'FAILED'</simple>
                     <log message="Ready to throw exception"/>
                     <process ref="failureProcessor"/>
+                    <log message="Send to DLQ"/>
+
                 </when>
                 <otherwise>
                     <setHeader name="Content-Type">
@@ -33,6 +35,7 @@
                     <setBody>
                         <simple>{"message":"Successfully Received", "date":"${date:now:yyyy-MM-dd HH:mm:ss}"}</simple>
                     </setBody>
+                    <log message="Success in Sending the Data"/>
                 </otherwise>
             </choice>
 
